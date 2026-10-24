@@ -5,9 +5,25 @@ import 'dotenv/config';
 import connectDB from "./config/db.js";
 import authRoute from "./routes/auth.js";
 import messageRoute from "./routes/messageRoutes.js"
+import cors from "cors";
 
 const app = express();
 app.use(express.json());
+
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin(origin, callback) {
+    // Non-browser tools (curl, Postman) may omit Origin.
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Origin is not allowed by CORS."));
+  },
+  methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 
 // const server = http.createServer(app);
 
@@ -25,8 +41,8 @@ app.get('/api/health', (_, res) => {
 
 connectDB();
 // .then(()=>{
-    app.listen(3000, () => {
-        console.log("Server Running at http://localhost:3000");
+    app.listen(5000, () => {
+        console.log("Server Running at http://localhost:5000");
     })
 // })
 
