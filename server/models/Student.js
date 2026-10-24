@@ -15,4 +15,21 @@ const studentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+studentSchema.index({ email: 1 }, { unique: true });
+studentSchema.index({ rollNumber: 1 }, { unique: true });
+studentSchema.index({ anonymousNameKey: 1 }, { unique: true });
+
+studentSchema.methods.toPublicJSON = function toPublicJSON() {
+  return {
+    _id: this._id,
+    name: this.name,
+    rollNumber: this.rollNumber,
+    email: this.email,
+    group: this.group,
+    anonymousName: this.anonymousName,
+    role: this.role,
+    createdAt: this.createdAt,
+  };
+};
+
 export default mongoose.model("Student", studentSchema);
