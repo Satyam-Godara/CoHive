@@ -1,4 +1,4 @@
-# VoxCampus — Phase 1 frontend
+# CoHive — Phase 1 frontend
 
 React + Vite frontend for an anonymous student community with registration, login, three live chat channels, message history, message edit/delete, and alias updates.
 

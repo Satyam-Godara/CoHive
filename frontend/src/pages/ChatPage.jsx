@@ -244,7 +244,7 @@ export default function ChatPage() {
           <span className="brand-mark">
             <MessageCircle size={21} />
           </span>
-          voxCampus
+          CoHive
         </div>
 
         <div className="workspace-label">

@@ -51,7 +51,7 @@ export default function AuthPage({ mode }) {
   return (
     <main className="auth-layout">
       <section className="auth-story">
-        <div className="brand brand-light"><span className="brand-mark"><MessageCircle size={21} /></span> voxCampus</div>
+        <div className="brand brand-light"><span className="brand-mark"><MessageCircle size={21} /></span> CoHive</div>
         <div className="story-copy">
           <span className="eyebrow"><Sparkles size={14} /> YOUR CAMPUS, YOUR VOICE</span>
           <h1>Good conversations.<br /><span>No labels required.</span></h1>
@@ -66,7 +66,7 @@ export default function AuthPage({ mode }) {
 
       <section className="auth-panel">
         <div className="auth-card">
-          <div className="mobile-brand brand"><span className="brand-mark"><MessageCircle size={20} /></span> voxCampus</div>
+          <div className="mobile-brand brand"><span className="brand-mark"><MessageCircle size={20} /></span> CoHive</div>
           <div className="auth-heading">
             <span className="eyebrow">{isRegister ? "JOIN THE COMMUNITY" : "WELCOME BACK"}</span>
             <h2>{isRegister ? "Create your account" : "Pick up where you left off"}</h2>
@@ -96,7 +96,7 @@ export default function AuthPage({ mode }) {
             <button className="primary-button" type="submit" disabled={busy}>{busy ? "Please wait…" : isRegister ? "Create account" : "Sign in"} <ArrowRight size={17} /></button>
           </form>
 
-          <p className="auth-switch">{isRegister ? "Already part of VoxCampus?" : "New to VoxCampus?"} <Link to={isRegister ? "/login" : "/register"}>{isRegister ? "Sign in" : "Create an account"}</Link></p>
+          <p className="auth-switch">{isRegister ? "Already part of CoHive?" : "New to CoHive?"} <Link to={isRegister ? "/login" : "/register"}>{isRegister ? "Sign in" : "Create an account"}</Link></p>
           <p className="privacy-note"><ShieldCheck size={15} /> Your real name and roll number aren't shown in public chat.</p>
         </div>
       </section>
