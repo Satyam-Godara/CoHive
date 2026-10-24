@@ -1,8 +1,8 @@
-const express = require("express");
+import express from "express";
 // const http = require("http");
 // const { Server } = require("socket.io");
-const connectDB = require("./config/db");
-const authRoute = require("./routes/auth");
+import connectDB from "./config/db.js";
+import authRoute from "./routes/auth.js";
 
 const app = express();
 
@@ -20,9 +20,10 @@ app.get('/api/health', (_, res) => {
 
 
 
-connectDB().then(()=>{
+connectDB();
+// .then(()=>{
     app.listen(3000, () => {
         console.log("Server Running at http://localhost:3000");
     })
-})
+// })
 
