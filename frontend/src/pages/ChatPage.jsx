@@ -1,623 +1,296 @@
-
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Hash,
-  LogOut,
-  MessageCircle,
-  Send,
-  Settings2,
-  ShieldAlert,
-  CalendarDays,
-  Users,
-  X,
-  Pencil,
-  Trash2,
-  Check,
-} from "lucide-react";
+import { MessageCircle, ShieldAlert, Sparkles, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import api, { readableError } from "../lib/api.js";
-
-const channels = [
-  {
-    id: "general",
-    label: "General",
-    description: "Anything on your mind",
-    icon: MessageCircle,
-  },
-  {
-    id: "complaints",
-    label: "Complaints",
-    description: "Raise campus concerns",
-    icon: ShieldAlert,
-  },
-  {
-    id: "events",
-    label: "Events",
-    description: "What's happening around campus",
-    icon: CalendarDays,
-  },
-];
-
-function timeLabel(value) {
-  const date = new Date(value);
-
-  return Number.isNaN(date.getTime())
-    ? ""
-    : date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-}
+import { canClusterMessages, formatDateDivider, isSameDay } from "../lib/utils.js";
+import ChatSidebar, { CHANNELS } from "../components/chat/ChatSidebar.jsx";
+import ChatHeader from "../components/chat/ChatHeader.jsx";
+import MessageItem from "../components/chat/MessageItem.jsx";
+import MessageComposer from "../components/chat/MessageComposer.jsx";
+import DeleteModal from "../components/chat/DeleteModal.jsx";
+import ProfileModal from "../components/profile/ProfileModal.jsx";
+import { MessageStreamSkeleton } from "../components/ui/Skeleton.jsx";
 
 export default function ChatPage() {
-  const { user, logout, setUser } = useAuth();
+  const { user, logout, updateUser } = useAuth();
 
   const [channel, setChannel] = useState("general");
   const [messages, setMessages] = useState([]);
-  const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Modals & Active Edit State
   const [editingId, setEditingId] = useState(null);
-  const [editText, setEditText] = useState("");
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [alias, setAlias] = useState(user?.anonymousName || "");
-  const [aliasMessage, setAliasMessage] = useState("");
+  const [pendingDeleteMsg, setPendingDeleteMsg] = useState(null);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const bottomRef = useRef(null);
-  const activeChannel =
-    channels.find((item) => item.id === channel) || channels[0];
+  const activeChannel = CHANNELS.find((item) => item.id === channel) || CHANNELS[0];
 
-  // READ: Load messages for the selected channel.
+  // Online / Offline monitor
+  useEffect(() => {
+    function handleOnline() {
+      setIsOnline(true);
+      loadMessages(false);
+    }
+    function handleOffline() {
+      setIsOnline(false);
+    }
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Fetch messages
   const loadMessages = useCallback(
-    async (showLoader = true) => {
-      if (showLoader) setLoading(true);
+    async (showSkeleton = true) => {
+      if (showSkeleton) setLoading(true);
 
       try {
         const { data } = await api.get(
           `/messages?channel=${encodeURIComponent(channel)}&limit=100`
         );
-
         setMessages(data.messages || []);
         setError("");
+        setIsOnline(true);
       } catch (err) {
-        setError(readableError(err));
+        if (!navigator.onLine) {
+          setIsOnline(false);
+        } else {
+          setError(readableError(err));
+        }
       } finally {
-        if (showLoader) setLoading(false);
+        if (showSkeleton) setLoading(false);
       }
     },
     [channel]
   );
 
-  // Initial load whenever the selected channel changes.
+  // Channel change effect
   useEffect(() => {
-    let cancelled = false;
-
-    async function fetchInitialMessages() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const { data } = await api.get(
-          `/messages?channel=${encodeURIComponent(channel)}&limit=100`
-        );
-
-        if (!cancelled) {
-          setMessages(data.messages || []);
-        }
-      } catch (err) {
-        if (!cancelled) setError(readableError(err));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    fetchInitialMessages();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [channel]);
-
-  // HTTP polling replaces Socket.IO events.
-  // Fetch updates every five seconds without showing the loading screen.
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      loadMessages(false);
-    }, 5000);
-
-    return () => window.clearInterval(intervalId);
+    loadMessages(true);
   }, [loadMessages]);
 
-  // Scroll to the latest message.
+  // Background polling (every 5 seconds)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
-  }, [messages]);
+    const timer = setInterval(() => {
+      if (navigator.onLine) {
+        loadMessages(false);
+      }
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [loadMessages]);
 
-  // CREATE: Send a message using POST.
-  async function sendMessage(event) {
-    event.preventDefault();
+  // Auto-scroll to bottom on new message
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length]);
 
-    const content = draft.trim();
-
-    if (!content || sending) return;
-
-    setSending(true);
+  // Send message with optimistic update
+  async function handleSendMessage(content) {
     setError("");
 
-    try {
-      const { data } = await api.post("/messages", {
-        channel,
-        content,
-      });
+    // Optimistic temporary message
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg = {
+      _id: tempId,
+      authorId: user?._id,
+      anonymousName: user?.anonymousName || "You",
+      channel,
+      content,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isOptimistic: true,
+    };
 
-      if (data.message) {
-        setMessages((current) =>
-          current.some((item) => item._id === data.message._id)
-            ? current
-            : [...current, data.message]
+    setMessages((prev) => [...prev, optimisticMsg]);
+
+    try {
+      const { data } = await api.post("/messages", { channel, content });
+      if (data?.message) {
+        setMessages((prev) =>
+          prev.map((m) => (m._id === tempId ? data.message : m))
         );
       }
-
-      setDraft("");
     } catch (err) {
+      // Revert optimistic message on failure
+      setMessages((prev) => prev.filter((m) => m._id !== tempId));
       setError(readableError(err));
-    } finally {
-      setSending(false);
     }
   }
 
-  // UPDATE: Edit a message using PATCH.
-  async function saveEdit(messageId) {
-    const content = editText.trim();
-
-    if (!content || content.length > 2000) {
-      setError("Message must contain 1–2000 characters.");
-      return;
-    }
-
+  // Edit message
+  async function handleSaveEdit(messageId, nextContent) {
     try {
       const { data } = await api.patch(`/messages/${messageId}`, {
-        content,
+        content: nextContent,
       });
 
-      setMessages((current) =>
-        current.map((item) =>
-          item._id === messageId ? data.message : item
-        )
+      setMessages((prev) =>
+        prev.map((m) => (m._id === messageId ? data.message : m))
       );
-
       setEditingId(null);
-      setEditText("");
       setError("");
     } catch (err) {
       setError(readableError(err));
     }
   }
 
-  // DELETE: Delete a message using DELETE.
-  async function deleteMessage(messageId) {
-    if (
-      !window.confirm("Delete this message? This cannot be undone.")
-    ) {
-      return;
-    }
-
+  // Delete message
+  async function handleConfirmDelete(messageId) {
     try {
       await api.delete(`/messages/${messageId}`);
-
-      setMessages((current) =>
-        current.filter((item) => item._id !== messageId)
-      );
-
+      setMessages((prev) => prev.filter((m) => m._id !== messageId));
+      setPendingDeleteMsg(null);
       setError("");
     } catch (err) {
       setError(readableError(err));
-    }
-  }
-
-  // Update the student's anonymous name.
-  async function saveAlias(event) {
-    event.preventDefault();
-    setAliasMessage("");
-
-    try {
-      const { data } = await api.patch("/students/me/alias", {
-        anonymousName: alias.trim(),
-      });
-
-      setUser(data.user);
-      setAlias(data.user.anonymousName);
-      setAliasMessage("Anonymous name updated.");
-    } catch (err) {
-      setAliasMessage(readableError(err));
     }
   }
 
   return (
-    <div className="chat-app">
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">
-            <MessageCircle size={21} />
-          </span>
-          CoHive
-        </div>
+    <div className="chat-app-shell">
+      {/* Sidebar Navigation */}
+      <ChatSidebar
+        activeChannel={channel}
+        onSelectChannel={(nextId) => {
+          setChannel(nextId);
+          setEditingId(null);
+          setError("");
+        }}
+        user={user}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        onLogout={logout}
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+      />
 
-        <div className="workspace-label">
-          YOUR CAMPUS <span className="live-dot" />
-        </div>
+      {/* Main Chat Stage */}
+      <main className="chat-viewport">
+        <ChatHeader
+          channelInfo={activeChannel}
+          onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
+          onOpenProfile={() => setIsProfileOpen(true)}
+          isOnline={isOnline}
+        />
 
-        <div className="channel-list">
-          <p className="sidebar-caption">
-            CHANNELS <span>03</span>
-          </p>
-
-          {channels.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <button
-                key={item.id}
-                className={`channel-link ${
-                  channel === item.id ? "active" : ""
-                }`}
-                onClick={() => {
-                  setChannel(item.id);
-                  setError("");
-                  setEditingId(null);
-                }}
-              >
-                <span className="channel-icon">
-                  <Icon size={17} />
-                </span>
-
-                <span className="channel-text">
-                  <strong>{item.label}</strong>
-                  <small>{item.description}</small>
-                </span>
-
-                {channel === item.id && (
-                  <span className="active-bar" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="sidebar-bottom">
-          <div className="privacy-card">
-            <ShieldAlert size={17} />
-            <div>
-              <strong>Stay respectful</strong>
-              <p>
-                Anonymous doesn't mean consequence-free. Don't share
-                private information.
-              </p>
-            </div>
-          </div>
-
-          <button
-            className="profile-button"
-            onClick={() => setProfileOpen(true)}
-          >
-            <span className="avatar">
-              {(user?.anonymousName || "V")
-                .slice(0, 1)
-                .toUpperCase()}
-            </span>
-
-            <span className="profile-meta">
-              <strong>{user?.anonymousName || "Campus member"}</strong>
-              <small>{user?.group || "Student"}</small>
-            </span>
-
-            <Settings2 size={17} />
-          </button>
-
-          <button className="logout-button" onClick={logout}>
-            <LogOut size={16} /> Sign out
-          </button>
-        </div>
-      </aside>
-
-      <main className="chat-main">
-        <header className="chat-header">
-          <div className="channel-heading">
-            <span className="hash-icon">
-              <Hash size={20} />
-            </span>
-
-            <div>
-              <h1>{activeChannel.label}</h1>
-              <p>{activeChannel.description}</p>
-            </div>
-          </div>
-
-          <div className="header-right">
-            <span className="connection">
-              <span />
-              HTTP chat
-            </span>
-
-            <div className="header-members">
-              <Users size={16} />
-              <span>Campus community</span>
-            </div>
-          </div>
-        </header>
-
-        <div className="channel-intro">
-          <div className="intro-icon">
-            <activeChannel.icon size={20} />
-          </div>
-
-          <div>
-            <h2>Welcome to #{activeChannel.id}</h2>
-            <p>
-              {channel === "general"
-                ? "Ask questions, share ideas, or just say hello."
-                : channel === "complaints"
-                  ? "Share concerns constructively. Avoid posting identifying or sensitive information."
-                  : "Share campus events, meetups, workshops, and opportunities."}
-            </p>
-          </div>
-        </div>
-
-        <section className="message-list" aria-live="polite">
-          {loading ? (
-            <div className="empty-state">
-              <div className="spinner" />
-              <p>Loading conversation…</p>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">
-                <MessageCircle size={23} />
+        {/* Messages Stream */}
+        {loading ? (
+          <MessageStreamSkeleton count={5} />
+        ) : (
+          <section className="messages-scroll-area" aria-label={`#${activeChannel.label} conversation`}>
+            {/* Top Channel Introduction Banner (Scrolls naturally) */}
+            <div className="feed-intro-card">
+              <div className="feed-intro-icon">
+                <activeChannel.icon size={24} />
               </div>
-              <h3>It's quiet in here — for now.</h3>
-              <p>
-                Start the conversation. Your campus community is listening.
-              </p>
-            </div>
-          ) : (
-            messages.map((message) => {
-              const own =
-                String(message.authorId || message.author?._id || "") ===
-                String(user?._id || "");
-
-              return (
-                <article
-                  className={`message ${own ? "own-message" : ""}`}
-                  key={message._id}
-                >
-                  <div className="message-avatar">
-                    {(
-                      message.anonymousName ||
-                      message.author?.anonymousName ||
-                      "V"
-                    )
-                      .slice(0, 1)
-                      .toUpperCase()}
-                  </div>
-
-                  <div className="message-body">
-                    <div className="message-meta">
-                      <strong>
-                        {message.anonymousName ||
-                          message.author?.anonymousName ||
-                          "Anonymous student"}
-                      </strong>
-
-                      {own && <span className="you-tag">YOU</span>}
-
-                      <time>{timeLabel(message.createdAt)}</time>
-
-                      {message.updatedAt &&
-                        new Date(message.updatedAt).getTime() >
-                          new Date(message.createdAt).getTime() && (
-                          <span className="edited-tag">edited</span>
-                        )}
-                    </div>
-
-                    {editingId === message._id ? (
-                      <div className="edit-row">
-                        <input
-                          value={editText}
-                          onChange={(event) =>
-                            setEditText(event.target.value)
-                          }
-                          maxLength={2000}
-                          autoFocus
-                        />
-
-                        <button
-                          aria-label="Save edit"
-                          onClick={() => saveEdit(message._id)}
-                        >
-                          <Check size={16} />
-                        </button>
-
-                        <button
-                          aria-label="Cancel edit"
-                          onClick={() => setEditingId(null)}
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <p className="message-content">{message.content}</p>
-                    )}
-
-                    {own && editingId !== message._id && (
-                      <div className="message-actions">
-                        <button
-                          onClick={() => {
-                            setEditingId(message._id);
-                            setEditText(message.content);
-                          }}
-                          aria-label="Edit message"
-                        >
-                          <Pencil size={13} /> Edit
-                        </button>
-
-                        <button
-                          onClick={() => deleteMessage(message._id)}
-                          aria-label="Delete message"
-                        >
-                          <Trash2 size={13} /> Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </article>
-              );
-            })
-          )}
-
-          {error && (
-            <div className="inline-error">
-              {error}
-              <button
-                onClick={() => setError("")}
-                aria-label="Dismiss error"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-
-          <div ref={bottomRef} />
-        </section>
-
-        <div className="composer-wrap">
-          <form className="composer" onSubmit={sendMessage}>
-            <textarea
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder={`Message #${channel} as ${
-                user?.anonymousName || "Anonymous student"
-              }…`}
-              rows={1}
-              maxLength={2000}
-              onKeyDown={(event) => {
-                if (
-                  event.key === "Enter" &&
-                  !event.shiftKey &&
-                  !event.nativeEvent.isComposing
-                ) {
-                  event.preventDefault();
-                  event.currentTarget.form.requestSubmit();
-                }
-              }}
-            />
-
-            <div className="composer-footer">
-              <span>
-                <ShieldAlert size={13} />
-                Your real identity stays off the chat screen.
-              </span>
-
               <div>
-                <small>{draft.length}/2000</small>
+                <h2>Welcome to #{activeChannel.label}</h2>
+                <p>
+                  {channel === "general"
+                    ? "Ask questions, share ideas, or talk about campus life anonymously."
+                    : channel === "complaints"
+                    ? "Raise campus grievances constructively. Keep it civil and respect privacy."
+                    : "Discover student clubs, workshops, hackathons, and campus events."}
+                </p>
+              </div>
+            </div>
+
+            {/* Error Notification */}
+            {error && (
+              <div
+                className="alert-banner error"
+                style={{ position: "sticky", top: "8px", zIndex: 10 }}
+              >
+                <span>{error}</span>
                 <button
-                  type="submit"
-                  className="send-button"
-                  disabled={!draft.trim() || sending}
-                  aria-label="Send message"
+                  type="button"
+                  className="btn-icon"
+                  style={{ marginLeft: "auto", width: "24px", height: "24px" }}
+                  onClick={() => setError("")}
+                  aria-label="Dismiss error"
                 >
-                  <Send size={17} />
+                  <X size={14} />
                 </button>
               </div>
-            </div>
-          </form>
+            )}
 
-          <p className="composer-hint">
-            Enter to send · Shift + Enter for a new line
-          </p>
-        </div>
+            {/* Empty State */}
+            {messages.length === 0 ? (
+              <div className="feed-empty-state">
+                <div className="empty-icon-wrap">
+                  <MessageCircle size={28} />
+                </div>
+                <h3>Quiet in #{activeChannel.label}</h3>
+                <p>
+                  Be the first to break the ice! Your real name stays private.
+                </p>
+              </div>
+            ) : (
+              messages.map((msg, index) => {
+                const prevMsg = messages[index - 1];
+                const showDateDivider = !prevMsg || !isSameDay(prevMsg.createdAt, msg.createdAt);
+                const isClustered = !showDateDivider && canClusterMessages(prevMsg, msg);
+                const isOwn = String(msg.authorId || msg.author?._id || "") === String(user?._id || "");
+
+                return (
+                  <React.Fragment key={msg._id}>
+                    {showDateDivider && (
+                      <div className="date-divider" role="separator">
+                        <span className="date-divider-pill">
+                          {formatDateDivider(msg.createdAt)}
+                        </span>
+                      </div>
+                    )}
+
+                    <MessageItem
+                      message={msg}
+                      isOwn={isOwn}
+                      isLeadInGroup={!isClustered}
+                      isEditing={editingId === msg._id}
+                      onStartEdit={(id) => setEditingId(id)}
+                      onCancelEdit={() => setEditingId(null)}
+                      onSaveEdit={handleSaveEdit}
+                      onRequestDelete={(target) => setPendingDeleteMsg(target)}
+                    />
+                  </React.Fragment>
+                );
+              })
+            )}
+
+            <div ref={bottomRef} style={{ height: "1px" }} />
+          </section>
+        )}
+
+        {/* Message Input Dock */}
+        <MessageComposer
+          channelName={activeChannel.label}
+          userAlias={user?.anonymousName}
+          onSend={handleSendMessage}
+          disabled={!isOnline}
+        />
       </main>
 
-      {profileOpen && (
-        <div
-          className="modal-backdrop"
-          onClick={() => setProfileOpen(false)}
-        >
-          <section
-            className="profile-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="profile-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              className="modal-close"
-              onClick={() => setProfileOpen(false)}
-              aria-label="Close settings"
-            >
-              <X size={18} />
-            </button>
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={!!pendingDeleteMsg}
+        message={pendingDeleteMsg}
+        onClose={() => setPendingDeleteMsg(null)}
+        onConfirm={handleConfirmDelete}
+      />
 
-            <div className="modal-avatar">
-              {(user?.anonymousName || "V")
-                .slice(0, 1)
-                .toUpperCase()}
-            </div>
-
-            <span className="eyebrow">YOUR CAMPUS IDENTITY</span>
-            <h2 id="profile-title">Profile settings</h2>
-            <p className="modal-description">
-              Other students see your anonymous name, not your registration
-              details.
-            </p>
-
-            <form onSubmit={saveAlias} className="auth-form">
-              <label>
-                Anonymous name
-                <input
-                  value={alias}
-                  onChange={(event) => setAlias(event.target.value)}
-                  required
-                  minLength={3}
-                  maxLength={24}
-                  placeholder="Choose an alias"
-                />
-              </label>
-
-              <span className="field-hint">
-                Must be unique. Letters, numbers, underscores, and hyphens
-                work best.
-              </span>
-
-              {aliasMessage && (
-                <p
-                  className={
-                    aliasMessage.includes("updated")
-                      ? "success-text"
-                      : "form-error"
-                  }
-                >
-                  {aliasMessage}
-                </p>
-              )}
-
-              <button className="primary-button" type="submit">
-                Save anonymous name <Check size={17} />
-              </button>
-            </form>
-
-            <div className="profile-private">
-              <strong>Private account details</strong>
-              <span>{user?.email}</span>
-              <span>Roll number: {user?.rollNumber}</span>
-              <span>Group: {user?.group}</span>
-            </div>
-          </section>
-        </div>
-      )}
+      {/* Student Profile & Settings Modal */}
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={user}
+        onUpdateUser={(updated) => updateUser(updated)}
+      />
     </div>
   );
 }

@@ -30,10 +30,11 @@ app.use(cors({
 // const io = new Server(server,{})
 
 app.use("/api/auth", authRoute);
+app.use("/api/students", authRoute);
 app.use("/api/messages", messageRoute);
 
 app.get('/api/health', (_, res) => {
-    res.status(200).json({status:"ok", time: new Date()});
+  res.status(200).json({ status: "ok", time: new Date() });
 })
 
 
@@ -41,8 +42,8 @@ app.get('/api/health', (_, res) => {
 
 connectDB();
 // .then(()=>{
-    app.listen(5000, () => {
-        console.log("Server Running at http://localhost:5000");
-    })
+app.listen(5000, () => {
+  console.log("Server Running at http://localhost:5000");
+})
 // })
 
