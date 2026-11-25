@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Check, Pencil, Trash2, X } from "lucide-react";
+import { AlertCircle, Check, Pencil, Trash2 } from "lucide-react";
 import Avatar from "../ui/Avatar.jsx";
 import Button from "../ui/Button.jsx";
 import { formatTime } from "../../lib/utils.js";
+import { MAX_MESSAGE_LENGTH, validateMessage } from "../../lib/validation.js";
 
 export default function MessageItem({
   message,
@@ -15,6 +16,7 @@ export default function MessageItem({
   onRequestDelete,
 }) {
   const [editText, setEditText] = useState(message.content);
+  const [editError, setEditError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const authorName =
@@ -27,11 +29,20 @@ export default function MessageItem({
     new Date(message.updatedAt).getTime() > new Date(message.createdAt).getTime() + 1000;
 
   async function handleSave() {
+    const validationError = validateMessage(editText);
+    if (validationError) {
+      setEditError(validationError);
+      return;
+    }
+
     const trimmed = editText.trim();
-    if (!trimmed || trimmed === message.content) {
+    if (trimmed === message.content) {
+      setEditError("");
       onCancelEdit();
       return;
     }
+
+    setEditError("");
     setIsSaving(true);
     try {
       await onSaveEdit(message._id, trimmed);
@@ -65,15 +76,21 @@ export default function MessageItem({
         )}
 
         {isEditing ? (
-          <div className="edit-editor-box">
+          <div className={`edit-editor-box ${editError ? "has-error" : ""}`}>
             <textarea
               className="edit-textarea"
               value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              maxLength={2000}
+              onChange={(e) => {
+                setEditText(e.target.value);
+                if (editError) setEditError("");
+              }}
+              maxLength={MAX_MESSAGE_LENGTH}
+              aria-label="Edit message"
+              aria-invalid={editError ? "true" : "false"}
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Escape") {
+                  setEditError("");
                   onCancelEdit();
                 } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault();
@@ -81,10 +98,24 @@ export default function MessageItem({
                 }
               }}
             />
+
+            {editError && (
+              <div className="field-error" role="alert" style={{ marginTop: "4px" }}>
+                <AlertCircle size={14} aria-hidden="true" />
+                <span>{editError}</span>
+              </div>
+            )}
+
             <div className="edit-button-row">
+              <span className="char-counter" style={{ marginRight: "auto", alignSelf: "center" }}>
+                {editText.length}/{MAX_MESSAGE_LENGTH}
+              </span>
               <Button
                 variant="ghost"
-                onClick={onCancelEdit}
+                onClick={() => {
+                  setEditError("");
+                  onCancelEdit();
+                }}
                 disabled={isSaving}
               >
                 Cancel
@@ -93,6 +124,7 @@ export default function MessageItem({
                 variant="primary"
                 onClick={handleSave}
                 loading={isSaving}
+                disabled={!editText.trim() || editText.length > MAX_MESSAGE_LENGTH}
                 icon={Check}
               >
                 Save
@@ -110,6 +142,7 @@ export default function MessageItem({
                   className="action-bar-btn"
                   onClick={() => {
                     setEditText(message.content);
+                    setEditError("");
                     onStartEdit(message._id);
                   }}
                   title="Edit message"

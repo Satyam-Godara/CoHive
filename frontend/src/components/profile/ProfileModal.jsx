@@ -1,11 +1,12 @@
-import React, { useState } from "react";
-import { Check, Dices, Lock, ShieldCheck, Sparkles } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Check, Dices, Lock, ShieldCheck } from "lucide-react";
 import Modal from "../ui/Modal.jsx";
 import Avatar from "../ui/Avatar.jsx";
 import Button from "../ui/Button.jsx";
 import Input from "../ui/Input.jsx";
 import api, { readableError } from "../../lib/api.js";
 import { generateRandomAlias } from "../../lib/utils.js";
+import { validateAlias } from "../../lib/validation.js";
 
 export default function ProfileModal({
   isOpen,
@@ -14,32 +15,53 @@ export default function ProfileModal({
   onUpdateUser,
 }) {
   const [alias, setAlias] = useState(user?.anonymousName || "");
+  const [fieldError, setFieldError] = useState("");
   const [statusMessage, setStatusMessage] = useState({ text: "", type: "" });
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setAlias(user?.anonymousName || "");
+      setFieldError("");
+      setStatusMessage({ text: "", type: "" });
+    }
+  }, [isOpen, user?.anonymousName]);
 
   function handleRollDice() {
     const freshAlias = generateRandomAlias();
     setAlias(freshAlias);
+    setFieldError("");
     setStatusMessage({ text: "Generated a new random handle. Click Save to keep it.", type: "info" });
+  }
+
+  function handleAliasChange(e) {
+    const nextVal = e.target.value;
+    setAlias(nextVal);
+    if (fieldError) {
+      setFieldError(validateAlias(nextVal, { required: true }));
+    }
+    if (statusMessage.text) {
+      setStatusMessage({ text: "", type: "" });
+    }
+  }
+
+  function handleAliasBlur() {
+    setFieldError(validateAlias(alias, { required: true }));
   }
 
   async function handleSave(e) {
     if (e) e.preventDefault();
-    const cleanAlias = alias.trim();
-    if (!cleanAlias) {
-      setStatusMessage({ text: "Anonymous name cannot be blank.", type: "error" });
-      return;
-    }
-    if (cleanAlias.length < 3 || cleanAlias.length > 24) {
-      setStatusMessage({ text: "Anonymous name must be 3–24 characters.", type: "error" });
+    const validationError = validateAlias(alias, { required: true });
+    if (validationError) {
+      setFieldError(validationError);
       return;
     }
 
+    const cleanAlias = alias.trim();
     setIsSaving(true);
     setStatusMessage({ text: "", type: "" });
 
     try {
-      // First try /students/me/alias, then fallback to /auth/alias if needed
       let res;
       try {
         res = await api.patch("/students/me/alias", { anonymousName: cleanAlias });
@@ -67,7 +89,7 @@ export default function ProfileModal({
       <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
         <Avatar name={alias || user?.anonymousName || "V"} size={54} />
         <div>
-          <span className="auth-pill" style={{ marginBottom: "6px", display: "inline-flex" }}>
+          <span className="auth-pill form-pill" style={{ marginBottom: "6px" }}>
             <ShieldCheck size={12} /> Campus Identity
           </span>
           <h2 className="modal-title" style={{ fontSize: "20px", margin: 0 }}>
@@ -76,13 +98,15 @@ export default function ProfileModal({
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="auth-form-grid">
+      <form onSubmit={handleSave} className="auth-form-grid" noValidate>
         <Input
           label="Your Public Campus Alias"
-          helpText="This is the only name shown in campus discussions. You can change it anytime if available."
+          helpText="3–24 characters: letters, numbers, underscores, or hyphens. Shown in campus discussions."
           name="alias"
           value={alias}
-          onChange={(e) => setAlias(e.target.value)}
+          onChange={handleAliasChange}
+          onBlur={handleAliasBlur}
+          error={fieldError}
           required
           minLength={3}
           maxLength={24}
@@ -93,6 +117,7 @@ export default function ProfileModal({
               className="input-action-btn"
               onClick={handleRollDice}
               title="Generate a random student handle"
+              aria-label="Generate a random student handle"
             >
               <Dices size={18} />
             </button>
@@ -101,27 +126,14 @@ export default function ProfileModal({
 
         {statusMessage.text && (
           <div
+            role={statusMessage.type === "error" ? "alert" : "status"}
             className={`alert-banner ${
               statusMessage.type === "error"
                 ? "error"
                 : statusMessage.type === "success"
                 ? "success"
-                : ""
+                : "info"
             }`}
-            style={{
-              background:
-                statusMessage.type === "info"
-                  ? "var(--brand-50)"
-                  : undefined,
-              borderColor:
-                statusMessage.type === "info"
-                  ? "var(--brand-200)"
-                  : undefined,
-              color:
-                statusMessage.type === "info"
-                  ? "var(--brand-700)"
-                  : undefined,
-            }}
           >
             {statusMessage.text}
           </div>
@@ -131,7 +143,7 @@ export default function ProfileModal({
           type="submit"
           variant="primary"
           loading={isSaving}
-          disabled={!alias.trim() || alias === user?.anonymousName}
+          disabled={!alias.trim() || alias.trim() === user?.anonymousName || !!fieldError}
           icon={Check}
           style={{ width: "100%" }}
         >

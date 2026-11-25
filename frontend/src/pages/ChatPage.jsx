@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { MessageCircle, ShieldAlert, Sparkles, X } from "lucide-react";
+import { MessageCircle, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import api, { readableError } from "../lib/api.js";
 import { canClusterMessages, formatDateDivider, isSameDay } from "../lib/utils.js";

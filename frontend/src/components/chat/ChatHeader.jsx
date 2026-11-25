@@ -1,5 +1,5 @@
 import React from "react";
-import { Hash, Menu, Settings2, Users } from "lucide-react";
+import { Hash, Menu, Settings2 } from "lucide-react";
 
 export default function ChatHeader({
   channelInfo,

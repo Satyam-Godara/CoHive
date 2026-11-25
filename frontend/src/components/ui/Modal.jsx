@@ -10,6 +10,7 @@ export default function Modal({
   maxWidth = "460px",
 }) {
   const dialogRef = useRef(null);
+  const previousFocusRef = useRef(null);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -19,13 +20,20 @@ export default function Modal({
     }
 
     if (isOpen) {
+      previousFocusRef.current = document.activeElement;
       document.body.style.overflow = "hidden";
       window.addEventListener("keydown", handleKeyDown);
+      requestAnimationFrame(() => {
+        dialogRef.current?.focus();
+      });
     }
 
     return () => {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
+      if (!isOpen && previousFocusRef.current instanceof HTMLElement) {
+        previousFocusRef.current.focus();
+      }
     };
   }, [isOpen, onClose]);
 
@@ -41,6 +49,7 @@ export default function Modal({
     >
       <div
         ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}

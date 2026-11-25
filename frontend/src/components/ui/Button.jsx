@@ -3,7 +3,6 @@ import React from "react";
 export default function Button({
   children,
   variant = "primary",
-  size = "md",
   type = "button",
   disabled = false,
   loading = false,
