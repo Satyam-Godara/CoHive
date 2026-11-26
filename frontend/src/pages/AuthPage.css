@@ -1,0 +1,441 @@
+/* ==========================================================================
+   COHIVE — CENTERED COSMIC AUTHENTICATION CARD (LOGIN & SIGNUP)
+   ========================================================================== */
+
+.cosmic-auth {
+  --ca-bg-deep: #0d0c18;
+  --ca-card: #1b1a29;
+  --ca-input-bg: #11101a;
+  --ca-primary: #c3c0ff;
+  --ca-btn: #5865f2;
+  --ca-btn-hover: #4f46e5;
+  --ca-text: #f2f3f5;
+  --ca-text-muted: #c2c6d4;
+  --ca-emerald: #34d399;
+  --ca-error: #fca5a5;
+  --ca-error-bg: rgba(153, 27, 27, 0.28);
+  --ca-error-border: rgba(248, 113, 113, 0.35);
+
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  position: relative;
+  overflow-x: hidden;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  color: var(--ca-text);
+  background:
+    radial-gradient(circle at 85% 35%, rgba(79, 70, 229, 0.45), transparent 52%),
+    radial-gradient(circle at 18% 72%, rgba(99, 102, 241, 0.26), transparent 48%),
+    radial-gradient(rgba(195, 192, 255, 0.14) 1px, transparent 1px),
+    linear-gradient(135deg, #0b0a16 0%, #14122c 55%, #1a1847 100%);
+  background-size: auto, auto, 36px 36px, auto;
+}
+
+/* Subtle Floating Sparkles */
+.cosmic-auth-sparkle {
+  position: fixed;
+  pointer-events: none;
+  color: rgba(195, 192, 255, 0.35);
+  z-index: 0;
+}
+
+.cosmic-auth-sparkle-1 {
+  top: 22%;
+  left: 12%;
+  width: 22px;
+  height: 22px;
+}
+
+.cosmic-auth-sparkle-2 {
+  bottom: 24%;
+  right: 10%;
+  width: 18px;
+  height: 18px;
+}
+
+/* Top-Left Brand Header */
+.cosmic-auth-brand {
+  position: fixed;
+  top: 1.25rem;
+  left: 1.75rem;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #ffffff;
+}
+
+.cosmic-auth-brand img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* Centered Auth Card */
+.cosmic-auth-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 780px;
+  border-radius: 14px;
+  padding: 1.85rem 2.25rem;
+  background: var(--ca-card);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 24px 64px rgba(4, 3, 12, 0.72);
+  display: grid;
+  grid-template-columns: 1.28fr 0.82fr;
+  gap: 2.15rem;
+  align-items: center;
+}
+
+.cosmic-auth-card.is-register {
+  max-width: 860px;
+  padding: 1.5rem 2rem;
+}
+
+/* Left Column: Form (Fits cleanly without scrolling) */
+.cosmic-auth-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.cosmic-auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: flex-start;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2f3f5;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: background-color 150ms ease;
+}
+
+.cosmic-auth-back:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.cosmic-auth-header {
+  text-align: center;
+}
+
+.cosmic-auth-header h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cosmic-auth-header p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--ca-text-muted);
+}
+
+/* Form Controls (Override styles.css specificity cleanly) */
+.cosmic-auth .auth-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.cosmic-auth .field-row-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.cosmic-auth .field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.26rem;
+}
+
+.cosmic-auth .field-group label {
+  color: #e2e0f0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cosmic-auth .field-group .required-mark {
+  color: #f87171;
+  margin-left: 3px;
+}
+
+.cosmic-auth .field-group .label-badge {
+  background: rgba(195, 192, 255, 0.14);
+  color: var(--ca-primary);
+  border: 1px solid rgba(195, 192, 255, 0.24);
+  text-transform: uppercase;
+  font-size: 0.64rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+}
+
+.cosmic-auth .field-help {
+  color: #9e9ab8;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.cosmic-auth .input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cosmic-auth .input-field {
+  width: 100%;
+  height: 40px;
+  padding: 0 0.85rem;
+  border-radius: 8px;
+  background: var(--ca-input-bg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 0.9rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.cosmic-auth .input-field.has-action {
+  padding-right: 2.5rem;
+}
+
+.cosmic-auth .input-field:hover {
+  border-color: rgba(195, 192, 255, 0.28);
+}
+
+.cosmic-auth .input-field:focus {
+  outline: none;
+  background: #0e0d17;
+  border-color: var(--ca-btn);
+  box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.32);
+}
+
+.cosmic-auth .input-field::placeholder {
+  color: rgba(194, 198, 212, 0.42);
+}
+
+.cosmic-auth .input-field.has-error {
+  border-color: #f87171;
+}
+
+.cosmic-auth .input-field.has-error:focus {
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.28);
+}
+
+/* Prevent browser white autofill override */
+.cosmic-auth .input-field:-webkit-autofill,
+.cosmic-auth .input-field:-webkit-autofill:hover,
+.cosmic-auth .input-field:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff;
+  -webkit-box-shadow: 0 0 0 1000px #11101a inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.cosmic-auth .field-error {
+  color: var(--ca-error);
+  font-size: 0.74rem;
+}
+
+.cosmic-auth .input-action-btn {
+  color: #a6a3bf;
+  background: transparent;
+}
+
+.cosmic-auth .input-action-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Password Checklist */
+.cosmic-auth .password-checklist {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(17, 16, 26, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.85rem;
+}
+
+.cosmic-auth .password-checklist li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: #9e9ab8;
+}
+
+.cosmic-auth .password-checklist li.is-met {
+  color: var(--ca-emerald);
+}
+
+.cosmic-auth .password-checklist li.is-met svg {
+  color: var(--ca-emerald);
+}
+
+/* Primary Submit Button */
+.cosmic-auth .btn-primary {
+  border-radius: 8px;
+  background: var(--ca-btn);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.92rem;
+  border: none;
+  box-shadow: none;
+  transition: background-color 150ms ease;
+}
+
+.cosmic-auth .btn-primary:hover:not(:disabled) {
+  background: var(--ca-btn-hover);
+}
+
+/* Error Alert */
+.cosmic-auth .alert-banner.error {
+  border-radius: 8px;
+  background: var(--ca-error-bg);
+  border: 1px solid var(--ca-error-border);
+  color: var(--ca-error);
+  padding: 0.6rem 0.85rem;
+  font-size: 0.8rem;
+}
+
+.cosmic-auth-switch {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ca-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cosmic-auth-switch a {
+  color: #818cf8;
+  font-weight: 600;
+}
+
+.cosmic-auth-switch a:hover {
+  text-decoration: underline;
+}
+
+/* Right Column: CoHive Companion Panel */
+.cosmic-auth-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.9rem;
+  padding: 0.5rem;
+}
+
+.cosmic-auth-owl-wrap {
+  width: 144px;
+  height: 144px;
+  border-radius: 16px;
+  background: rgba(17, 16, 26, 0.78);
+  border: 1px solid rgba(195, 192, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.cosmic-auth-owl-wrap img {
+  width: 108px;
+  height: 108px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(4, 3, 12, 0.6));
+}
+
+.cosmic-auth-side h3 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cosmic-auth-side p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ca-text-muted);
+  max-width: 16rem;
+}
+
+.cosmic-auth-alias-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  background: rgba(88, 101, 242, 0.18);
+  border: 1px solid rgba(195, 192, 255, 0.22);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--ca-primary);
+}
+
+.cosmic-auth-privacy-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  color: var(--ca-emerald);
+}
+
+/* Responsive */
+@media (max-width: 780px) {
+  .cosmic-auth {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+    flex-direction: column;
+    padding: 1.5rem 1rem 2rem;
+  }
+
+  .cosmic-auth-brand {
+    position: static;
+    margin-bottom: 1.25rem;
+  }
+
+  .cosmic-auth-card,
+  .cosmic-auth-card.is-register {
+    max-width: 460px;
+    max-height: none;
+    grid-template-columns: 1fr;
+    padding: 1.5rem;
+  }
+
+  .cosmic-auth-form-col {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .cosmic-auth-side {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .cosmic-auth .field-row-split {
+    grid-template-columns: 1fr;
+  }
+}
