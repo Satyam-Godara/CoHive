@@ -10,6 +10,7 @@ import MessageComposer from "../components/chat/MessageComposer.jsx";
 import DeleteModal from "../components/chat/DeleteModal.jsx";
 import ProfileModal from "../components/profile/ProfileModal.jsx";
 import { MessageStreamSkeleton } from "../components/ui/Skeleton.jsx";
+import "./ChatPage.css";
 
 export default function ChatPage() {
   const { user, logout, updateUser } = useAuth();
@@ -27,6 +28,8 @@ export default function ChatPage() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const bottomRef = useRef(null);
+  const scrollAreaRef = useRef(null);
+  const isPinnedToBottomRef = useRef(true);
   const activeChannel = CHANNELS.find((item) => item.id === channel) || CHANNELS[0];
 
   // Online / Offline monitor
@@ -86,10 +89,42 @@ export default function ChatPage() {
     return () => clearInterval(timer);
   }, [loadMessages]);
 
-  // Auto-scroll to bottom on new message
+  // Track whether user is near the bottom so composer resize & updates keep last message visible
+  function handleMessagesScroll() {
+    const el = scrollAreaRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    isPinnedToBottomRef.current = distanceFromBottom < 100;
+  }
+
+  // Keep pinned to bottom when container resizes (e.g. composer expands multi-line)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length]);
+    const el = scrollAreaRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const ro = new ResizeObserver(() => {
+      if (isPinnedToBottomRef.current) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [loading]);
+
+  // Auto-scroll to bottom when channel finishes loading or messages arrive
+  useEffect(() => {
+    if (loading) return;
+    const el = scrollAreaRef.current;
+    if (!el) return;
+    if (isPinnedToBottomRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
+  }, [messages.length, loading]);
+
+  // Always snap to bottom when switching channels
+  useEffect(() => {
+    isPinnedToBottomRef.current = true;
+  }, [channel]);
 
   // Send message with optimistic update
   async function handleSendMessage(content) {
@@ -183,7 +218,12 @@ export default function ChatPage() {
         {loading ? (
           <MessageStreamSkeleton count={5} />
         ) : (
-          <section className="messages-scroll-area" aria-label={`#${activeChannel.label} conversation`}>
+          <section
+            ref={scrollAreaRef}
+            onScroll={handleMessagesScroll}
+            className="messages-scroll-area"
+            aria-label={`#${activeChannel.label} conversation`}
+          >
             {/* Top Channel Introduction Banner (Scrolls naturally) */}
             <div className="feed-intro-card">
               <div className="feed-intro-icon">

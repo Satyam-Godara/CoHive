@@ -13,13 +13,15 @@ export default function MessageComposer({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef(null);
 
-  // Auto-resize textarea height smoothly
+  // Auto-resize textarea height smoothly and only show scrollbar past max height
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    const nextHeight = Math.min(el.scrollHeight, 140);
-    el.style.height = `${Math.max(nextHeight, 40)}px`;
+    const maxH = 160;
+    const nextHeight = Math.min(el.scrollHeight, maxH);
+    el.style.height = `${Math.max(nextHeight, 26)}px`;
+    el.style.overflowY = el.scrollHeight > maxH ? "auto" : "hidden";
   }, [draft]);
 
   function handleChange(e) {
@@ -47,7 +49,8 @@ export default function MessageComposer({
       await onSend(draft.trim());
       setDraft("");
       if (textareaRef.current) {
-        textareaRef.current.style.height = "40px";
+        textareaRef.current.style.height = "26px";
+        textareaRef.current.style.overflowY = "hidden";
       }
     } finally {
       setIsSubmitting(false);
@@ -67,17 +70,32 @@ export default function MessageComposer({
 
   return (
     <div className="composer-dock">
+      {error && (
+        <div id="composer-error" className="composer-inline-error" role="alert">
+          <AlertCircle size={14} aria-hidden="true" />
+          <span>{error}</span>
+        </div>
+      )}
+
       <form
         className={`composer-frame ${error ? "has-error" : ""}`}
         onSubmit={handleSubmit}
         noValidate
       >
+        <span
+          className="composer-privacy-icon"
+          title="Real name & roll number stay private"
+          aria-hidden="true"
+        >
+          <ShieldCheck size={17} />
+        </span>
+
         <textarea
           ref={textareaRef}
           value={draft}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={`Message #${channelName} as ${userAlias || "Student"}…`}
+          placeholder={`Message #${channelName} as ${userAlias || "Student"}`}
           rows={1}
           maxLength={MAX_MESSAGE_LENGTH}
           className="composer-input"
@@ -86,46 +104,26 @@ export default function MessageComposer({
           aria-describedby={error ? "composer-error" : undefined}
         />
 
-        <div className="composer-controls">
-          <div className="composer-meta">
-            {error ? (
-              <span id="composer-error" className="field-error" role="alert">
-                <AlertCircle size={14} aria-hidden="true" />
-                <span>{error}</span>
-              </span>
-            ) : (
-              <>
-                <ShieldCheck size={14} />
-                <span>Real name & roll number stay private</span>
-              </>
-            )}
-          </div>
+        {(isNearLimit || isOverLimit) && (
+          <span
+            className={`char-counter ${isNearLimit ? "warning" : ""} ${
+              isOverLimit ? "danger" : ""
+            }`}
+          >
+            {charCount}/{MAX_MESSAGE_LENGTH}
+          </span>
+        )}
 
-          <div className="composer-actions-right">
-            <span
-              className={`char-counter ${isNearLimit ? "warning" : ""} ${
-                isOverLimit ? "danger" : ""
-              }`}
-            >
-              {charCount > 0 ? `${charCount}/${MAX_MESSAGE_LENGTH}` : ""}
-            </span>
-
-            <button
-              type="submit"
-              className="send-action-btn"
-              disabled={!draft.trim() || isOverLimit || isSubmitting || disabled}
-              aria-label="Send message"
-              title="Send (Enter)"
-            >
-              <Send size={16} />
-            </button>
-          </div>
-        </div>
+        <button
+          type="submit"
+          className="send-action-btn"
+          disabled={!draft.trim() || isOverLimit || isSubmitting || disabled}
+          aria-label="Send message"
+          title="Send (Enter)"
+        >
+          <Send size={16} />
+        </button>
       </form>
-
-      <div className="keyboard-shortcut-hint">
-        <strong>Enter</strong> to send · <strong>Shift + Enter</strong> for line break
-      </div>
     </div>
   );
 }

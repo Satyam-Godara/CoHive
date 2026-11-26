@@ -30,11 +30,6 @@ export default function ChatHeader({
       </div>
 
       <div className="chat-header-actions">
-        <div className={`live-badge ${!isOnline ? "offline" : ""}`}>
-          <span className="dot" />
-          <span>{isOnline ? "Campus Live" : "Reconnecting…"}</span>
-        </div>
-
         <button
           type="button"
           className="btn-icon"

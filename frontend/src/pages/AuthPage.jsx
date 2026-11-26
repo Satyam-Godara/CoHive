@@ -9,10 +9,7 @@ import {
   Eye,
   EyeOff,
   Lock,
-  MessageCircle,
   ShieldCheck,
-  Sparkles,
-  Users,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { readableError } from "../lib/api.js";
@@ -28,6 +25,7 @@ import {
 } from "../lib/validation.js";
 import Input from "../components/ui/Input.jsx";
 import Button from "../components/ui/Button.jsx";
+import "./AuthPage.css";
 
 const initialForm = {
   name: "",
@@ -172,113 +170,81 @@ export default function AuthPage({ mode }) {
   const passwordChecks = getPasswordChecks(form.password);
 
   return (
-    <main className="auth-container">
-      {/* Left Brand Showcase Section */}
-      <section className="auth-showcase">
-        <Link to="/" className="auth-brand" aria-label="Back to CoHive landing page">
-          <span className="brand-icon-box">
-            <MessageCircle size={22} />
-          </span>
-          <span>CoHive</span>
-        </Link>
+    <main className="cosmic-auth">
+      {/* Subtle Cosmic Sparkles */}
+      <svg
+        aria-hidden="true"
+        className="cosmic-auth-sparkle cosmic-auth-sparkle-1"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
+      </svg>
+      <svg
+        aria-hidden="true"
+        className="cosmic-auth-sparkle cosmic-auth-sparkle-2"
+        fill="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
+      </svg>
 
-        <div className="auth-showcase-content">
-          <div className="auth-pill">
-            <Sparkles size={14} />
-            <span>CAMPUS EXPRESSION · VERIFIED PRIVACY</span>
-          </div>
+      {/* Top-Left Brand Logo */}
+      <Link to="/" className="cosmic-auth-brand" aria-label="Back to CoHive landing page">
+        <img src="/images/cohive-badge.png" alt="CoHive Hexagon Badge" />
+        <span>CoHive</span>
+      </Link>
 
-          <h1 className="auth-headline">
-            Real campus talk.<br />
-            <span>Zero social anxiety.</span>
-          </h1>
+      {/* Centered Card */}
+      <section className={`cosmic-auth-card ${isRegister ? "is-register" : ""}`}>
+        {/* Left: Login / Signup Form */}
+        <div className="cosmic-auth-form-col">
+          <Link to="/" className="cosmic-auth-back">
+            <ArrowLeft size={14} />
+            <span>Go back</span>
+          </Link>
 
-          <p className="auth-subhead">
-            The authenticated space to ask questions, report campus grievances,
-            and discover events with a protected anonymous student alias.
-          </p>
-
-          <div className="feature-cards">
-            <div className="feature-card">
-              <ShieldCheck size={20} />
-              <div>
-                <strong>Verified Student Privacy</strong>
-                <p>Only verified students enter. Your real name and roll number never appear in chat.</p>
-              </div>
-            </div>
-
-            <div className="feature-card">
-              <Users size={20} />
-              <div>
-                <strong>Three Focused Channels</strong>
-                <p>Casual discussions in #general, facility issues in #complaints, and hackathons in #events.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <footer className="auth-showcase-footer">
-          CoHive · Built for university students by students.
-        </footer>
-      </section>
-
-      {/* Right Form Section */}
-      <section className="auth-panel">
-        <div className="auth-form-card">
-          <div className="auth-top-bar">
-            <Link to="/" className="auth-back-link">
-              <ArrowLeft size={15} />
-              <span>Back to Home</span>
-            </Link>
-            <div className="auth-mode-tabs" role="tablist" aria-label="Authentication mode">
-              <Link
-                to="/login"
-                role="tab"
-                aria-selected={!isRegister}
-                className={`auth-mode-tab ${!isRegister ? "is-active" : ""}`}
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                role="tab"
-                aria-selected={isRegister}
-                className={`auth-mode-tab ${isRegister ? "is-active" : ""}`}
-              >
-                Create Account
-              </Link>
-            </div>
-          </div>
-
-          <header className="auth-form-header">
-            <span className="auth-pill form-pill">
-              {isRegister ? "STUDENT ENROLLMENT" : "WELCOME BACK"}
-            </span>
-            <h2>{isRegister ? "Create your account" : "Sign in to CoHive"}</h2>
+          <header className="cosmic-auth-header">
+            <h2>{isRegister ? "Create an account" : "Welcome back!"}</h2>
             <p>
               {isRegister
-                ? "Verify your student credentials and choose your campus alias."
-                : "Enter your university credentials to jump into the discussion."}
+                ? "Verify your student status and pick your anonymous alias."
+                : "We're so excited to see you again!"}
             </p>
           </header>
 
           <form ref={formRef} onSubmit={submit} className="auth-form-grid" noValidate>
             {isRegister && (
               <>
-                <Input
-                  label="Full Name"
-                  name="name"
-                  value={form.name}
-                  onChange={update}
-                  onBlur={handleBlur}
-                  error={fieldErrors.name}
-                  placeholder="e.g. Alex Sharma"
-                  autoComplete="name"
-                  required
-                  minLength={2}
-                  maxLength={80}
-                  helpText="Used solely for institutional verification."
-                />
+                <div className="field-row-split">
+                  <Input
+                    label="Full Name"
+                    name="name"
+                    value={form.name}
+                    onChange={update}
+                    onBlur={handleBlur}
+                    error={fieldErrors.name}
+                    placeholder="e.g. Alex Sharma"
+                    autoComplete="name"
+                    required
+                    minLength={2}
+                    maxLength={80}
+                  />
+
+                  <Input
+                    label="Student Email"
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={update}
+                    onBlur={handleBlur}
+                    error={fieldErrors.email}
+                    placeholder="you@college.edu"
+                    autoComplete="email"
+                    required
+                    maxLength={254}
+                  />
+                </div>
 
                 <div className="field-row-split">
                   <Input
@@ -308,19 +274,21 @@ export default function AuthPage({ mode }) {
               </>
             )}
 
-            <Input
-              label="Student Email"
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={update}
-              onBlur={handleBlur}
-              error={fieldErrors.email}
-              placeholder="you@college.edu"
-              autoComplete="email"
-              required
-              maxLength={254}
-            />
+            {!isRegister && (
+              <Input
+                label="Student Email"
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={update}
+                onBlur={handleBlur}
+                error={fieldErrors.email}
+                placeholder="you@college.edu"
+                autoComplete="email"
+                required
+                maxLength={254}
+              />
+            )}
 
             <div>
               <Input
@@ -401,24 +369,45 @@ export default function AuthPage({ mode }) {
               variant="primary"
               loading={busy}
               icon={ArrowRight}
-              style={{ width: "100%", height: "46px", marginTop: "4px" }}
+              style={{ width: "100%", height: "44px", marginTop: "4px" }}
             >
-              {isRegister ? "Create Student Account" : "Sign in to Campus"}
+              {isRegister ? "Create Account" : "Log In"}
             </Button>
           </form>
 
-          <p className="auth-footer-switch">
-            {isRegister ? "Already registered?" : "New to CoHive?"}
+          <p className="cosmic-auth-switch">
+            {isRegister ? "Already have an account?" : "Need an account?"}
             <Link to={isRegister ? "/login" : "/register"}>
-              {isRegister ? "Sign in instead" : "Create an account"}
+              {isRegister ? "Log In" : "Register"}
             </Link>
           </p>
-
-          <div className="privacy-disclaimer">
-            <Lock size={14} />
-            <span>Encrypted with college student privacy protection</span>
-          </div>
         </div>
+
+        {/* Right: CoHive Anonymous Identity Companion */}
+        <aside className="cosmic-auth-side" aria-label="Privacy overview">
+          <div className="cosmic-auth-owl-wrap">
+            <img src="/images/char-owl.png" alt="CoHive Scholar Owl" />
+          </div>
+
+          <h3>Anonymous Campus Connect</h3>
+          <p>
+            {isRegister
+              ? "Your real name and roll number verify your campus access—public channels only see your alias."
+              : "Jump back into #general, #complaints, and #events under your private student alias."}
+          </p>
+
+          {isRegister && form.anonymousName.trim() ? (
+            <div className="cosmic-auth-alias-preview">
+              <ShieldCheck size={14} />
+              <span>Alias: {form.anonymousName.trim()}</span>
+            </div>
+          ) : (
+            <div className="cosmic-auth-privacy-badge">
+              <Lock size={14} />
+              <span>Real identity stays private</span>
+            </div>
+          )}
+        </aside>
       </section>
     </main>
   );

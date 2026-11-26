@@ -74,11 +74,6 @@ export default function ChatSidebar({
           )}
         </div>
 
-        <div className="campus-pill">
-          <span>Campus Workspace</span>
-          <span className="pulse-dot" title="Connected to campus network" />
-        </div>
-
         <nav className="channel-nav" aria-label="Channels">
           <span className="nav-section-title">
             <span>Channels</span>
